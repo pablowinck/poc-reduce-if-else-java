@@ -1,0 +1,132 @@
+# Projeto: POC Reduce If-Else Java
+
+## Visão Geral
+
+Este projeto visa demonstrar abordagens para a eliminação de estruturas `if-else` no cálculo de taxas para diferentes tipos de clientes em Java. Através de diferentes estratégias, o projeto apresenta formas de lidar com a adição de novos tipos de clientes sem impactar significativamente o código existente.
+
+Projeto inspirado no artigo: [Stop using if-else statements in Java](https://medium.com/javarevisited/stop-using-if-else-statements-in-java-57234e13bf9d)
+
+Três abordagens principais são apresentadas:
+
+- **Vertical (switch/if-else)**: A abordagem tradicional de crescimento vertical onde novos tipos de clientes são adicionados diretamente em condicionais.
+- **Vertical Anêmica (Enum)**: Uso de um `enum` com comportamentos diferentes para cada tipo de cliente, mantendo a lógica centralizada em um único local.
+- **Horizontal (Strategy Pattern)**: Implementação baseada no padrão de design Strategy, onde a lógica de cálculo de taxas é distribuída entre diferentes classes, facilitando a escalabilidade sem impactar o código existente.
+
+## Estrutura do Projeto
+
+### Dependências (pom.xml)
+
+O projeto utiliza o **Spring Boot** como base, junto com o **Lombok** para simplificar o código e reduzir a verbosidade. As dependências incluem:
+
+- `spring-boot-starter`: A dependência principal para rodar o projeto Spring Boot.
+- `lombok`: Para evitar boilerplate de código.
+- `spring-boot-starter-test`: Para facilitar a implementação e execução de testes unitários.
+
+### Abordagens
+
+#### 1. Vertical (if-else / switch)
+
+Na classe `CalculadoraDeTaxa`, o cálculo de taxas é realizado utilizando a estrutura `switch`. A cada novo tipo de cliente, é necessário adicionar um novo `case`, o que aumenta o acoplamento da lógica e dos testes, tornando a manutenção mais complexa com o tempo.
+
+```java
+public class CalculadoraDeTaxa {
+    public double calcular(String tipoCliente, double valor) {
+        return switch (tipoCliente) {
+            case "VIP" -> valor * 0.1;
+            case "PREMIUM" -> valor * 0.2;
+            case "NORMAL" -> valor * 0.3;
+            default -> 0;
+        };
+    }
+}
+```
+
+#### 2. Vertical Anêmica (Enum)
+
+A classe `CalculadoraDeTaxaAnemica` utiliza um `enum` para representar os diferentes tipos de clientes. Cada tipo de cliente tem sua própria lógica de cálculo de taxa encapsulada no próprio `enum`. Isso evita a repetição de condicionais no código.
+
+```java
+public class CalculadoraDeTaxaAnemica {
+    public double calcular(TipoCliente tipoCliente, double valor) {
+        return tipoCliente.calcular(valor);
+    }
+}
+```
+
+#### 3. Horizontal (Strategy Pattern)
+
+A implementação horizontal adota o padrão Strategy, onde cada tipo de cliente tem sua própria classe de cálculo de taxa. Isso facilita a adição de novos tipos de clientes sem modificar as classes existentes, seguindo o princípio aberto/fechado (Open/Closed Principle) do SOLID.
+
+##### Sem Spring
+
+```java
+public class CalculadoraDeTaxaHorizontal {
+    public static final Map<String, CalculadoraDeTaxaStrategy> strategies = new HashMap<>();
+
+    static {
+        strategies.put("VIP", new CalculadoraVIP());
+        strategies.put("PREMIUM", new CalculadoraPremium());
+        strategies.put("NORMAL", new CalculadoraNormal());
+    }
+
+    public double calcular(String tipoCliente, double valor) {
+        return strategies.get(tipoCliente).calcular(valor);
+    }
+}
+```
+
+##### Com Spring
+
+Com o uso de Spring, as classes de cálculo são componentes que são gerenciados pelo framework, facilitando a injeção de dependências e a configuração automática das estratégias.
+
+```java
+@Component
+public class CalculadoraDeTaxaHorizontalSpringComponent {
+    private final Map<String, CalculadoraDeTaxaStrategy> strategies = new HashMap<>();
+
+    @PostConstruct
+    public void init() {
+        applicationContext.getBeansOfType(CalculadoraDeTaxaStrategy.class)
+                .values()
+                .forEach(calculadoraDeTaxaStrategy -> strategies.put(calculadoraDeTaxaStrategy.getTipo(), calculadoraDeTaxaStrategy));
+    }
+
+    public double calcular(String tipoCliente, double valor) {
+        return strategies.get(tipoCliente).calcular(valor);
+    }
+}
+```
+
+### Testes Unitários
+
+O projeto contém uma cobertura de testes unitários que validam cada uma das abordagens descritas, garantindo que as taxas para os diferentes tipos de clientes sejam calculadas corretamente.
+
+Exemplo de teste para a abordagem vertical:
+
+```java
+@ParameterizedTest(name = "[vertical] {0} -> {1}")
+@CsvSource({
+        "VIP, 10",
+        "PREMIUM, 20",
+        "NORMAL, 30"})
+void deveCalcularAsTaxasCorretamente(String tipoCliente, double valorEsperado) {
+    var calculadora = new CalculadoraDeTaxa();
+    var valor = 100;
+    var taxa = calculadora.calcular(tipoCliente, valor);
+    assertEquals(valorEsperado, taxa);
+}
+```
+
+### Conclusão
+
+O projeto `poc-reduce-if-else-java` explora diversas maneiras de reduzir o uso de estruturas `if-else` em Java. A abordagem mais adequada depende das necessidades do projeto, sendo que o uso do padrão Strategy (horizontal) é recomendado para cenários que exigem escalabilidade e flexibilidade.
+
+### Como Executar
+
+Para executar o projeto, utilize o comando Maven:
+
+```bash
+mvn spring-boot:run
+```
+
+Isso iniciará a aplicação e exibirá os cálculos de taxas para os diferentes tipos de clientes diretamente no console.
