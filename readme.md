@@ -123,6 +123,30 @@ aberto/fechado (Open/Closed Principle) do SOLID.
 
 ##### Sem Spring
 
+Com isso, criamos classes concretas que implementam uma interface comum, `CalculadoraDeTaxaStrategy`, e utilizamos um mapa para associar cada tipo de cliente a sua respectiva classe de cálculo.
+
+Interface:
+```java
+public interface CalculadoraDeTaxaStrategy {
+
+    double calcular(double valor);
+
+}
+```
+
+Exemplo de implementação:
+```java
+public class CalculadoraNormal implements CalculadoraDeTaxaStrategy {
+
+    @Override
+    public double calcular(double valor) {
+        return valor * 0.3;
+    }
+  
+}
+```
+
+Exemplo de mapa de estratégias:
 ```java
 public class CalculadoraDeTaxaHorizontal {
 
@@ -154,6 +178,41 @@ var taxa = calculadora.calcular("VIP", valor);
 Com o uso de Spring, as classes de cálculo são componentes que são gerenciados pelo framework, facilitando a injeção de
 dependências e a configuração automática das estratégias.
 
+Porém, vamos precisar modificar um pouco as strategies para que o Spring consiga identificar e injetar as dependências.
+
+Interface:
+```java
+public interface CalculadoraDeTaxaStrategy {
+
+    double calcular(double valor);
+
+    // Método para identificar o tipo da estratégia, 
+    // necessário para montarmos o mapa de estratégias posteriormente
+    String getTipo();
+    
+}
+```
+
+Exemplo de implementação:
+```java
+@Component
+public class CalculadoraNormal implements CalculadoraDeTaxaStrategy {
+
+    @Override
+    public double calcular(double valor) {
+        return valor * 0.3;
+    }
+
+    @Override
+    public String getTipo() {
+        return "NORMAL";
+    }
+
+}
+```
+
+Componente que gerencia as estratégias:
+
 ```java
 
 @Component
@@ -161,7 +220,12 @@ public class CalculadoraDeTaxaHorizontalSpringComponent {
 
     private final Map<String, CalculadoraDeTaxaStrategy> strategies = new HashMap<>();
 
-    @PostConstruct
+  /**
+   * Inicializa o componente com todas as estratégias disponíveis no contexto do Spring.
+   * @PostConstruct é uma anotação do Spring que indica que o método deve ser executado após a inicialização do bean.
+   * Isso garante que todas as estratégias estejam disponíveis antes de serem utilizadas.
+   */
+  @PostConstruct
     public void init() {
         applicationContext.getBeansOfType(CalculadoraDeTaxaStrategy.class)
                 .values()

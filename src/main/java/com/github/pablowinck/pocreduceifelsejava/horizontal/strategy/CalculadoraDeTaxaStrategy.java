@@ -5,4 +5,5 @@ public interface CalculadoraDeTaxaStrategy {
     double calcular(double valor);
 
     String getTipo();
+
 }
